@@ -14,7 +14,7 @@ namespace BotFactory
             public string Model { get; set; }
             public BuildableUnit(double buildTime = 5, string name ="No name" )
             {
-                BuildTime = buildTime;
+                BuildTime =  buildTime;
                 Model = name;
             }
         }
