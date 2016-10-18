@@ -2,7 +2,7 @@
 using BotFactory.Models;
 using System.Threading.Tasks;
 
-namespace BotFactory.Factories
+namespace BotFactory.Interface
 {
     public interface ITestingUnit
     {
