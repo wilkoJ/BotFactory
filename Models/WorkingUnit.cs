@@ -22,14 +22,24 @@ namespace BotFactory.Models
             public bool IsWorking { get; set; }
         public virtual async Task<bool> WorkBegins()
         {
+            StatusChangedEventArgs s = new StatusChangedEventArgs();
+            s.NewStatus = String.Format( "{0} is going to work!! Tireeeedd", Name );
+            OnStatusChanged( this, s );
             var result = await Move( WorkingPos );
             IsWorking = true;
+            s.NewStatus = String.Format("{0} start working",Name);
+            OnStatusChanged( this, s );
             return result;
         }
         public virtual async Task<bool> WorkEnds()
         {
+            StatusChangedEventArgs s = new StatusChangedEventArgs();
+            s.NewStatus = String.Format( "{0} on his way home", Name );
+            OnStatusChanged( this, s );
             var result =await Move( ParkingPos );
             IsWorking = false;
+            s.NewStatus = String.Format( "{0} stop working", Name );
+            OnStatusChanged( this, s );
             return result;
         }    
     }
