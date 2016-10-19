@@ -20,10 +20,12 @@ namespace BotFactory
                 Name = name;
                 Time = time;
                 CurrentPos = new Coordinates();
-                Console.WriteLine( "New unit built named {0}", Name);
             }
             public async Task<bool> Move(Coordinates end)
             {
+                StatusChangedEventArgs s = new StatusChangedEventArgs();
+                s.NewStatus = String.Format( "{0} is currently moving", Name );
+                OnStatusChanged( this, s );
                 Vector direction = Vector.FromCoordinates( CurrentPos, end );
                 int time = (int)direction.Length * (int)Time;
                 await Task.Delay( time * 100 );
@@ -32,7 +34,6 @@ namespace BotFactory
             }
             public void DoSomethingElse()
             {
-                Console.WriteLine( "Can do something else while moving" );
             }
     
         }
