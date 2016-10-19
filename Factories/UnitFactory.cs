@@ -68,6 +68,8 @@ namespace BotFactory.Factories
             {
                 _queue.Add( new FactoryQueueElement( name, model, parkPosition, workPosition ) );
                 QueueFreeSlots--;
+                TimeSpan sp = TimeSpan.FromSeconds(( int )(( ITestingUnit )Activator.CreateInstance( _queue.First().Model )).BuildTime);
+                QueueTime = QueueTime.Add( sp );
                 if( _storage.Count() < StorageCapacity )
                 {
                     if( Monitor.TryEnter( lockObj ) )
@@ -121,7 +123,7 @@ namespace BotFactory.Factories
             _queue.Remove( _queue.First() );
             QueueFreeSlots++;
             TimeSpan sp = TimeSpan.FromSeconds(( int )toStore.BuildTime);
-            QueueTime = QueueTime.Add( sp );
+            QueueTime = QueueTime.Subtract(sp);
             //StatusChangedEventArgs s = new StatusChangedEventArgs();( int )Storage.Last().BuildTime *
             s.NewStatus = "Robot created";
             FactoryProgress( this, s);
