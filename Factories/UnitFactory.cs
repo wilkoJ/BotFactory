@@ -26,6 +26,8 @@ namespace BotFactory.Factories
         private object lockObj;
         private List<FactoryQueueElement> _queue;
         private List<ITestingUnit> _storage;
+        private object lockObj2;
+
         public UnitFactory( int queueCapacity, int storageCapacity )
         {
             QueueCapacity = QueueFreeSlots = queueCapacity;
@@ -34,6 +36,7 @@ namespace BotFactory.Factories
             _storage = new List<ITestingUnit>();
             QueueTime = new TimeSpan(0,0,0);
             lockObj = new object();
+            lockObj2 = new object();
             factoryThread = new Thread(new ThreadStart(ThreadRun));
             try
             {
@@ -64,21 +67,26 @@ namespace BotFactory.Factories
         }*/
         public bool AddWorkableUnitToQueue(Type model, string name, Coordinates parkPosition, Coordinates workPosition)
         {
-            if( _queue.Count < QueueCapacity)
+            if( Monitor.TryEnter( lockObj2 ) )
             {
-                _queue.Add( new FactoryQueueElement( name, model, parkPosition, workPosition ) );
-                QueueFreeSlots--;
-                TimeSpan sp = TimeSpan.FromSeconds(( int )(( ITestingUnit )Activator.CreateInstance( _queue.First().Model )).BuildTime);
-                QueueTime = QueueTime.Add( sp );
-                if( _storage.Count() < StorageCapacity )
+                if( _queue.Count < QueueCapacity )
                 {
+                    _queue.Add( new FactoryQueueElement( name, model, parkPosition, workPosition ) );
+                    QueueFreeSlots = QueueCapacity - _queue.Count();
+
+                    TimeSpan sp = TimeSpan.FromSeconds(( int )(( ITestingUnit )Activator.CreateInstance( _queue.First().Model )).BuildTime);
+                    QueueTime = QueueTime.Add( sp );
+                    Monitor.Exit(lockObj2);
                     if( Monitor.TryEnter( lockObj ) )
                     {
-                        Monitor.Pulse( lockObj );
-                        Monitor.Exit( lockObj );
+                        if( _storage.Count() < StorageCapacity )
+                        {
+                            Monitor.Pulse( lockObj );
+                            Monitor.Exit( lockObj );
+                        }
                     }
+                    return true;
                 }
-                return true;
             }
             return false;
          }
@@ -113,18 +121,21 @@ namespace BotFactory.Factories
             StatusChangedEventArgs s = new StatusChangedEventArgs();
             s.NewStatus = "Robot start creation";
             FactoryProgress(this, s );
-            ITestingUnit toStore = ( ITestingUnit )Activator.CreateInstance( _queue.First().Model );
-            toStore.WorkingPos = _queue.First().WorkingPos;
-            toStore.ParkingPos = _queue.First().ParkingPos;
-            toStore.Name= _queue.First().Name;
-            Thread.Sleep( ( ( int )toStore.BuildTime * 1000 ) );
+
+            FactoryQueueElement first = _queue.First();
+            ITestingUnit toStore = ( ITestingUnit )Activator.CreateInstance( first.Model );
+            toStore.WorkingPos = first.WorkingPos;
+            toStore.ParkingPos = first.ParkingPos;
+            toStore.Name= first.Name;
+
+            Thread.Sleep(((int)toStore.BuildTime * 1000));
             _storage.Add( toStore );
-            StorageFreeSlots--;
-            _queue.Remove( _queue.First() );
-            QueueFreeSlots++;
+            StorageFreeSlots = StorageCapacity - _storage.Count();
+            _queue.Remove(first);
+            QueueFreeSlots = QueueCapacity - _queue.Count();
+
             TimeSpan sp = TimeSpan.FromSeconds(toStore.BuildTime);
             QueueTime = QueueTime.Subtract(sp);
-            //StatusChangedEventArgs s = new StatusChangedEventArgs();( int )Storage.Last().BuildTime *
             s.NewStatus = "Robot created";
             FactoryProgress( this, s);
         }
@@ -137,6 +148,9 @@ namespace BotFactory.Factories
         public void ThreadRun()
         {
             createRobot();
+        }
+        ~UnitFactory() {
+            factoryThread.Abort();
         }
     }
 }
