@@ -13,26 +13,33 @@ namespace BotFactory.Factories
     public class UnitFactory : IUnitFactory
     {
         //private static UnitFactory instance;
-        public bool flaglock = true;
-        public int QueueCapacity { get; set; }
         Thread factoryThread;
+
         public TimeSpan QueueTime { get; set; }
+
         public int StorageCapacity { get; set; }
+        public int QueueCapacity { get; set; }
         public int QueueFreeSlots { get; set; }
         public int StorageFreeSlots { get; set; }
+
         public List<FactoryQueueElement> Queue { get { return _queue.ToList(); } set { } }
         public List<ITestingUnit> Storage { get { return _storage.ToList(); } set { } }
+
         public event FactoryProgress  FactoryProgress;
-        private object lockObj;
+
         private List<FactoryQueueElement> _queue;
         private List<ITestingUnit> _storage;
+
+        private object lockObj;
         private object lockObj2;
+        private bool canCreate;
 
         public UnitFactory( int queueCapacity, int storageCapacity )
         {
             //Data for the Collections
             QueueCapacity = QueueFreeSlots = queueCapacity;
             StorageCapacity = StorageFreeSlots = storageCapacity;
+            canCreate = true;
             //Queue and Storage Collections
             _queue = new List<FactoryQueueElement>();
             _storage = new List<ITestingUnit>();
@@ -86,6 +93,7 @@ namespace BotFactory.Factories
                     {
                         if( _storage.Count() < StorageCapacity )
                         {
+                            canCreate = true;
                             Monitor.Pulse( lockObj );
                             Monitor.Exit( lockObj );
                         }
@@ -98,25 +106,29 @@ namespace BotFactory.Factories
         public void createRobot()
         {
             Monitor.Enter( lockObj );
-            try
+            while( canCreate )
             {
-                if( _queue.Count() == 0 )
-                    Monitor.Wait( lockObj );
-            }
-            catch( SynchronizationLockException e )
-            {
-                Console.WriteLine( e );
-            }
-            catch( ThreadInterruptedException e )
-            {
-                Console.WriteLine( e );
-            }
-            finally
-            {
-                if( _storage.Count() < StorageCapacity && _queue.Count() > 0 )
+                try
                 {
-                    addRobotToStorage();
-                    createRobot();
+                    if( _queue.Count() == 0 )
+                        Monitor.Wait( lockObj );
+                }
+                catch( SynchronizationLockException e )
+                {
+                    Console.WriteLine( e );
+                }
+                catch( ThreadInterruptedException e )
+                {
+                    Console.WriteLine( e );
+                }
+                finally
+                {
+                    if( _storage.Count() < StorageCapacity && _queue.Count() > 0 )
+                    {
+                        addRobotToStorage();
+                        createRobot();
+                    }
+                    canCreate = false;
                 }
             }
         }
