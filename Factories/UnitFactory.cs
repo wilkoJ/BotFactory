@@ -122,7 +122,7 @@ namespace BotFactory.Factories
             StorageFreeSlots--;
             _queue.Remove( _queue.First() );
             QueueFreeSlots++;
-            TimeSpan sp = TimeSpan.FromSeconds(( int )toStore.BuildTime);
+            TimeSpan sp = TimeSpan.FromSeconds(toStore.BuildTime);
             QueueTime = QueueTime.Subtract(sp);
             //StatusChangedEventArgs s = new StatusChangedEventArgs();( int )Storage.Last().BuildTime *
             s.NewStatus = "Robot created";
