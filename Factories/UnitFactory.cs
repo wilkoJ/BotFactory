@@ -30,14 +30,18 @@ namespace BotFactory.Factories
 
         public UnitFactory( int queueCapacity, int storageCapacity )
         {
+            //Data for the Collections
             QueueCapacity = QueueFreeSlots = queueCapacity;
             StorageCapacity = StorageFreeSlots = storageCapacity;
+            //Queue and Storage Collections
             _queue = new List<FactoryQueueElement>();
             _storage = new List<ITestingUnit>();
             QueueTime = new TimeSpan(0,0,0);
+            //Thread variables
             lockObj = new object();
             lockObj2 = new object();
             factoryThread = new Thread(new ThreadStart(ThreadRun));
+
             try
             {
                 factoryThread.Start();
@@ -77,6 +81,7 @@ namespace BotFactory.Factories
                     TimeSpan sp = TimeSpan.FromSeconds(( int )(( ITestingUnit )Activator.CreateInstance( _queue.First().Model )).BuildTime);
                     QueueTime = QueueTime.Add( sp );
                     Monitor.Exit(lockObj2);
+
                     if( Monitor.TryEnter( lockObj ) )
                     {
                         if( _storage.Count() < StorageCapacity )
